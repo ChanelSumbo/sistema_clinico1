@@ -1,198 +1,187 @@
 # ==========================================
-# APP.PY - SISTEMA HOSPITALAR DE MALÁRIA
+# SISTEMA CLÍNICO DE MALÁRIA
 # Flask + Fuzzy + MySQL
+# Render Ready
 # ==========================================
 
 from flask import Flask, render_template, request, redirect, session, url_for, flash
+from werkzeug.security import generate_password_hash, check_password_hash
 from functools import wraps
-from fuzzy import calcular_risco
 from database import conectar
+from fuzzy import calcular_risco
+from dotenv import load_dotenv
+import os
 
-# ==========================================
-# CONFIGURAÇÃO DO APP
-# ==========================================
+load_dotenv()
+
 app = Flask(__name__)
-app.secret_key = 'segredo'
-
+app.secret_key = os.getenv("SECRET_KEY", "segredo_super")
 
 # ==========================================
-# 🔐 FUNÇÃO DE PROTEÇÃO (LOGIN OBRIGATÓRIO)
+# LOGIN REQUIRED
 # ==========================================
 def login_required(f):
     @wraps(f)
-    def decorated_function(*args, **kwargs):
-        if 'user' not in session:
-            return redirect('/')
+    def decorated(*args, **kwargs):
+        if "user" not in session:
+            return redirect(url_for("login"))
         return f(*args, **kwargs)
-    return decorated_function
+    return decorated
 
 
 # ==========================================
 # LOGIN
 # ==========================================
-@app.route('/', methods=['GET', 'POST'])
+@app.route("/", methods=["GET","POST"])
 def login():
 
-    if request.method == 'POST':
-        user = request.form['username']
-        pw = request.form['password']
+    if request.method=="POST":
 
-        db = conectar()
-        cursor = db.cursor()
+        user=request.form["username"]
+        pw=request.form["password"]
+
+        db=conectar()
+        cursor=db.cursor()
+
+        cursor.execute("SELECT * FROM usuarios WHERE username=%s",(user,))
+        usuario=cursor.fetchone()
+
+        if usuario and check_password_hash(usuario[2],pw):
+            session["user"]=user
+            return redirect(url_for("menu"))
+
+        flash("Login inválido","danger")
+
+    return render_template("login.html")
+
+
+# ==========================================
+# REGISTRAR
+# ==========================================
+@app.route("/registrar",methods=["GET","POST"])
+def registrar():
+
+    if request.method=="POST":
+
+        user=request.form["username"]
+        senha_hash=generate_password_hash(request.form["password"])
+
+        db=conectar()
+        cursor=db.cursor()
 
         cursor.execute(
-            "SELECT * FROM usuarios WHERE username=%s AND password=%s",
-            (user, pw)
+            "INSERT INTO usuarios(username,password) VALUES(%s,%s)",
+            (user,senha_hash)
         )
+        db.commit()
 
-        res = cursor.fetchone()
+        flash("Usuário criado!","success")
+        return redirect(url_for("login"))
 
-        if res:
-            session['user'] = user
-            return redirect(url_for('menu'))
-        else:
-            flash("Usuário ou senha inválidos", "danger")
-
-    return render_template('login.html')
+    return render_template("registrar.html")
 
 
 # ==========================================
-# MENU PRINCIPAL
+# MENU
 # ==========================================
-@app.route('/menu')
+@app.route("/menu")
 @login_required
 def menu():
-    return render_template('menu.html')
+    return render_template("menu.html")
 
 
 # ==========================================
-# FORMULÁRIO DE DIAGNÓSTICO
+# FORMULÁRIO
 # ==========================================
-@app.route('/home')
+@app.route("/home")
 @login_required
 def home():
-    return render_template('form.html')
+    return render_template("form.html")
 
 
 # ==========================================
-# DIAGNÓSTICO (COM GPS)
+# DIAGNÓSTICO
 # ==========================================
-@app.route('/diagnostico', methods=['POST'])
+@app.route("/diagnostico",methods=["POST"])
 @login_required
 def diagnostico():
 
-    # Dados do formulário
-    f = float(request.form['febre'])
-    fa = float(request.form['fadiga'])
-    a = float(request.form['anemia'])
+    febre=float(request.form["febre"])
+    fadiga=float(request.form["fadiga"])
+    anemia=float(request.form["anemia"])
 
-    # GPS (opcional)
-    lat = request.form.get('latitude') or 0
-    lon = request.form.get('longitude') or 0
+    latitude=request.form.get("latitude",0)
+    longitude=request.form.get("longitude",0)
 
-    # Calcular risco
-    risco = round(calcular_risco(f, fa, a), 2)
+    risco=round(calcular_risco(febre,fadiga,anemia),2)
 
-    # Classificação
-    if risco < 40:
-        nivel = 'Baixo'
-    elif risco < 70:
-        nivel = 'Moderado'
+    if risco<40:
+        nivel="Baixo"
+    elif risco<70:
+        nivel="Moderado"
     else:
-        nivel = 'Alto'
+        nivel="Alto"
 
-    # Salvar no banco
-    db = conectar()
-    cursor = db.cursor()
+    db=conectar()
+    cursor=db.cursor()
 
     cursor.execute("""
-        INSERT INTO diagnosticos 
-        (febre, fadiga, anemia, risco, nivel, latitude, longitude)
-        VALUES (%s, %s, %s, %s, %s, %s, %s)
-    """, (f, fa, a, risco, nivel, lat, lon))
+        INSERT INTO diagnosticos
+        (febre,fadiga,anemia,risco,nivel,latitude,longitude)
+        VALUES(%s,%s,%s,%s,%s,%s,%s)
+    """,(febre,fadiga,anemia,risco,nivel,latitude,longitude))
 
     db.commit()
 
-    return render_template('resultado.html', risco=risco, nivel=nivel)
+    return render_template("resultado.html",risco=risco,nivel=nivel)
 
 
 # ==========================================
 # RELATÓRIO
 # ==========================================
-@app.route('/relatorio')
+@app.route("/relatorio")
 @login_required
 def relatorio():
 
-    db = conectar()
-    cursor = db.cursor()
+    db=conectar()
+    cursor=db.cursor()
 
     cursor.execute("SELECT * FROM diagnosticos ORDER BY id DESC")
-    dados = cursor.fetchall()
+    dados=cursor.fetchall()
 
-    return render_template('relatorio.html', dados=dados)
-
-
-# ==========================================
-# APAGAR REGISTRO
-# ==========================================
-@app.route('/apagar/<int:id>', methods=['POST'])
-@login_required
-def apagar(id):
-
-    db = conectar()
-    cursor = db.cursor()
-
-    cursor.execute("DELETE FROM diagnosticos WHERE id=%s", (id,))
-    db.commit()
-
-    return redirect(url_for('relatorio'))
+    return render_template("relatorio.html",dados=dados)
 
 
 # ==========================================
-# DASHBOARD (COM CONTAGEM + %)
+# DASHBOARD
 # ==========================================
-@app.route('/dashboard')
+@app.route("/dashboard")
 @login_required
 def dashboard():
 
-    db = conectar()
-    cursor = db.cursor()
+    db=conectar()
+    cursor=db.cursor()
 
-    # Corrigir registros sem nível
-    cursor.execute("""
-        UPDATE diagnosticos 
-        SET nivel = 
-        CASE 
-            WHEN risco < 40 THEN 'Baixo'
-            WHEN risco < 70 THEN 'Moderado'
-            ELSE 'Alto'
-        END
-        WHERE nivel IS NULL
-    """)
-    db.commit()
-
-    # Contagem
     cursor.execute("SELECT COUNT(*) FROM diagnosticos WHERE nivel='Baixo'")
-    baixo = cursor.fetchone()[0]
+    baixo=cursor.fetchone()[0]
 
     cursor.execute("SELECT COUNT(*) FROM diagnosticos WHERE nivel='Moderado'")
-    moderado = cursor.fetchone()[0]
+    moderado=cursor.fetchone()[0]
 
     cursor.execute("SELECT COUNT(*) FROM diagnosticos WHERE nivel='Alto'")
-    alto = cursor.fetchone()[0]
+    alto=cursor.fetchone()[0]
 
-    total = baixo + moderado + alto
+    total=baixo+moderado+alto
 
-    # Percentagens
-    if total > 0:
-        p_baixo = round((baixo / total) * 100, 1)
-        p_moderado = round((moderado / total) * 100, 1)
-        p_alto = round((alto / total) * 100, 1)
+    if total>0:
+        p_baixo=round((baixo/total)*100,1)
+        p_moderado=round((moderado/total)*100,1)
+        p_alto=round((alto/total)*100,1)
     else:
-        p_baixo = p_moderado = p_alto = 0
+        p_baixo=p_moderado=p_alto=0
 
     return render_template(
-        'dashboard.html',
+        "dashboard.html",
         baixo=baixo,
         moderado=moderado,
         alto=alto,
@@ -203,89 +192,17 @@ def dashboard():
 
 
 # ==========================================
-# 🌍 MAPA (GPS)
-# ==========================================
-@app.route('/mapa')
-@login_required
-def mapa():
-
-    db = conectar()
-    cursor = db.cursor(dictionary=True)
-
-    cursor.execute("""
-        SELECT latitude, longitude, nivel, data_registro 
-        FROM diagnosticos
-    """)
-
-    dados = cursor.fetchall()
-
-    return render_template('mapa.html', dados=dados)
-
-
-
-# ==========================================
-# REGISTRAR USUÁRIO
-# ==========================================
-@app.route('/registrar', methods=['GET', 'POST'])
-def registrar():
-
-    if request.method == 'POST':
-        user = request.form['username']
-        pw = request.form['password']
-
-        db = conectar()
-        cursor = db.cursor()
-
-        cursor.execute(
-            "INSERT INTO usuarios (username, password) VALUES (%s, %s)",
-            (user, pw)
-        )
-        db.commit()
-
-        return redirect('/')
-
-    return render_template('registrar.html')
-
-
-# ==========================================
-# RECUPERAR SENHA
-# ==========================================
-@app.route('/recuperar', methods=['GET', 'POST'])
-def recuperar():
-
-    if request.method == 'POST':
-        user = request.form['username']
-        nova = request.form['nova_senha']
-
-        db = conectar()
-        cursor = db.cursor()
-
-        cursor.execute(
-            "UPDATE usuarios SET password=%s WHERE username=%s",
-            (nova, user)
-        )
-        db.commit()
-
-        flash("Senha atualizada com sucesso!", "success")
-        return redirect('/')
-
-    return render_template('recuperar.html')
-
-
-# ==========================================
 # LOGOUT
 # ==========================================
-@app.route('/logout')
+@app.route("/logout")
 def logout():
     session.clear()
-    return redirect('/')
+    return redirect(url_for("login"))
 
 
 # ==========================================
-# EXECUTAR SISTEMA
+# EXECUÇÃO LOCAL
 # ==========================================
-if __name__ == '__main__':
-    import os
-
-if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 10000)))
+if __name__=="__main__":
+    port=int(os.environ.get("PORT",5000))
+    app.run(host="0.0.0.0",port=port)
