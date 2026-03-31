@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Resultado</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+
+<body class="bg-light">
+
+<div class="container mt-5">
+
+<div class="card shadow p-4 text-center">
+
+<h2>Resultado do Diagnóstico</h2>
+
+<p class="fs-4">
+Risco: <strong>{{ risco }}</strong>
+</p>
+
+{% if risco >= 70 %}
+<p class="text-danger fw-bold">⚠️ Alto risco</p>
+{% elif risco >= 40 %}
+<p class="text-warning fw-bold">⚠️ Moderado</p>
+{% else %}
+<p class="text-success fw-bold">✅ Baixo risco</p>
+{% endif %}
+
+<a href="/menu" class="btn btn-primary mt-3">Voltar</a>
+
+</div>
+
+</div>
+
+</body>
+</html>

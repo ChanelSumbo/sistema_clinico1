@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="UTF-8">
+<title>Sistema de Doenças Tropicais no Município do Quêlo – Zaire, Angola</title>
+
+<!-- Leaflet -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+
+<!-- Cluster -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.css"/>
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.Default.css"/>
+
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet.markercluster/dist/leaflet.markercluster.js"></script>
+
+<style>
+body {
+    background: #f4f6f9;
+    font-family: Arial;
+}
+
+#map {
+    height: 550px;
+    border-radius: 12px;
+}
+
+.header {
+    text-align: center;
+    margin: 20px;
+}
+</style>
+</head>
+
+<body>
+
+<div class="header">
+    <h2>🏥 Mapa de Casos de Malária</h2>
+    <a href="/menu" class="btn btn-primary">Voltar</a>
+</div>
+
+<div class="container">
+    <div id="map"></div>
+</div>
+
+<script>
+
+// Criar mapa
+var map = L.map('map').setView([-15, -47], 4);
+
+// Camada mapa
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© OpenStreetMap'
+}).addTo(map);
+
+// Cluster
+var markers = L.markerClusterGroup();
+
+// Dados do Flask
+var dados = {{ dados | tojson }};
+
+// Guardar pontos válidos
+var pontos = [];
+
+dados.forEach(function(caso){
+
+    if(caso.latitude != 0 && caso.longitude != 0){
+
+        pontos.push([caso.latitude, caso.longitude]);
+
+        var cor = "green";
+        if(caso.nivel == "Moderado") cor = "orange";
+        if(caso.nivel == "Alto") cor = "red";
+
+        var marker = L.circleMarker([caso.latitude, caso.longitude], {
+            color: cor,
+            radius: 8,
+            fillOpacity: 0.8
+        });
+
+        marker.bindPopup(`
+            <b>🩺 Diagnóstico</b><br>
+            Risco: ${caso.nivel}<br>
+            Data: ${caso.data_registro}
+        `);
+
+        markers.addLayer(marker);
+    }
+});
+
+// Adicionar ao mapa
+map.addLayer(markers);
+
+// Centralizar automaticamente
+if(pontos.length > 0){
+    map.fitBounds(pontos);
+}
+
+</script>
+
+</body>
+</html>
