@@ -4,3 +4,4 @@ scikit-fuzzy
 numpy
 gunicorn
 scipy
+networkx
