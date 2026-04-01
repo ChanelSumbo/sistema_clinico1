@@ -1,25 +1,186 @@
 <!DOCTYPE html>
-<html>
+<html lang="pt">
 <head>
-<title>Login</title>
-<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+<meta charset="UTF-8">
+<title>Login - Sistema Malária</title>
+
+<!-- Bootstrap -->
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+
+<!-- Ícones -->
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+
+<style>
+
+/* RESET */
+body, html {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+}
+
+/* CARROSSEL */
+.carousel,
+.carousel-inner,
+.carousel-item {
+    height: 100vh;
+}
+
+.carousel-item img {
+    width: 100%;
+    height: 100vh;
+    object-fit: cover;
+    filter: brightness(60%);
+}
+
+/* LOGIN */
+.overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100vh;
+
+    display: flex;
+    justify-content: center;
+    align-items: center;
+
+    z-index: 9999;
+}
+
+/* CARD */
+.card {
+    border-radius: 15px;
+    animation: fadeIn 0.8s ease;
+    width: 350px;
+}
+
+/* ANIMAÇÃO */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* RESPONSIVO */
+@media (max-width: 768px) {
+    .card {
+        width: 90%;
+    }
+}
+
+</style>
 </head>
 
-<body class="container mt-5">
+<body>
 
-<h3>Sistema Clínico de Malária</h3>
+<!-- CARROSSEL -->
+<div id="carouselExample" class="carousel slide carousel-fade" data-bs-ride="carousel" data-bs-interval="3000">
 
-<form method="POST">
+    <div class="carousel-inner">
 
-<input name="username" class="form-control mb-2" placeholder="Usuário">
+        <div class="carousel-item active">
+            <img src="{{ url_for('static', filename='img/l.png') }}" alt="Imagem 1">
+        </div>
 
-<input type="password" name="password" class="form-control mb-2" placeholder="Senha">
+        <div class="carousel-item">
+            <img src="{{ url_for('static', filename='img/r.png') }}" alt="Imagem 2">
+        </div>
 
-<button class="btn btn-primary">Entrar</button>
+        <div class="carousel-item">
+            <img src="{{ url_for('static', filename='img/c.png') }}" alt="Imagem 3">
+        </div>
 
-<a href="/registrar">Criar conta</a>
+        <div class="carousel-item">
+            <img src="{{ url_for('static', filename='img/p.png') }}" alt="Imagem 4">
+        </div>
 
-</form>
+        <div class="carousel-item">
+            <img src="{{ url_for('static', filename='img/i.png') }}" alt="Imagem 5">
+        </div>
+
+        <div class="carousel-item">
+            <img src="{{ url_for('static', filename='img/a.png') }}" alt="Imagem 6">
+        </div>
+
+    </div>
+
+</div>
+
+<!-- LOGIN -->
+<div class="overlay">
+
+    <div class="card p-4 shadow bg-white">
+
+        <h3 class="text-center mb-3">
+            <i class="fa fa-user"></i> Login
+        </h3>
+
+        <!-- FLASH MESSAGES -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for categoria, mensagem in messages %}
+                <div class="alert alert-{{ categoria }} text-center">
+                    {{ mensagem }}
+                </div>
+            {% endfor %}
+        {% endif %}
+        {% endwith %}
+
+        <!-- FORM -->
+        <form method="POST">
+
+            <div class="mb-3">
+                <input type="email" name="email" class="form-control" placeholder="Email" required>
+            </div>
+
+            <div class="mb-3">
+                <div class="input-group">
+                    <input id="senha" type="password" name="password" class="form-control" placeholder="Senha" required>
+
+                    <button type="button" class="btn btn-outline-secondary" onclick="toggleSenha()">
+                        <i class="fa fa-eye"></i>
+                    </button>
+                </div>
+            </div>
+
+            <button type="submit" class="btn btn-primary w-100">
+                Entrar
+            </button>
+
+        </form>
+
+        <!-- LINKS -->
+        <div class="text-center mt-3">
+            <a href="{{ url_for('recuperar') }}">Esqueceu a senha?</a><br>
+
+            <a href="{{ url_for('registrar') }}" class="btn btn-success mt-2 w-100">
+                Criar Conta
+            </a>
+        </div>
+
+    </div>
+
+</div>
+
+<!-- JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+function toggleSenha() {
+    const senha = document.getElementById("senha");
+    if (senha.type === "password") {
+        senha.type = "text";
+    } else {
+        senha.type = "password";
+    }
+}
+</script>
 
 </body>
 </html>

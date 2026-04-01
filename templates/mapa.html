@@ -2,7 +2,10 @@
 <html lang="pt">
 <head>
 <meta charset="UTF-8">
-<title>Sistema de Doenças Tropicais no Município do Quêlo – Zaire, Angola</title>
+<title>Mapa de Casos - Malária</title>
+
+<!-- Bootstrap -->
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 
 <!-- Leaflet -->
 <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
@@ -23,6 +26,7 @@ body {
 #map {
     height: 550px;
     border-radius: 12px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.2);
 }
 
 .header {
@@ -34,21 +38,25 @@ body {
 
 <body>
 
-<div class="header">
-    <h2>🏥 Mapa de Casos de Malária</h2>
-    <a href="/menu" class="btn btn-primary">Voltar</a>
-</div>
-
 <div class="container">
+
+    <!-- TÍTULO -->
+    <div class="header">
+        <h2>🏥 Mapa de Casos de Malária</h2>
+        <a href="{{ url_for('menu') }}" class="btn btn-primary">Voltar</a>
+    </div>
+
+    <!-- MAPA -->
     <div id="map"></div>
+
 </div>
 
 <script>
 
-// Criar mapa
-var map = L.map('map').setView([-15, -47], 4);
+// 📍 Coordenadas do Município do Quêlo - Angola
+var map = L.map('map').setView([-6.13, 15.74], 12);
 
-// Camada mapa
+// Camada base
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution: '© OpenStreetMap'
 }).addTo(map);
@@ -56,23 +64,25 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
 // Cluster
 var markers = L.markerClusterGroup();
 
-// Dados do Flask
+// Dados vindos do Flask
 var dados = {{ dados | tojson }};
 
-// Guardar pontos válidos
+// Lista para centralizar
 var pontos = [];
 
-dados.forEach(function(caso){
+// Percorrer dados
+dados.forEach(function(d){
 
-    if(caso.latitude != 0 && caso.longitude != 0){
+    if(d.latitude != 0 && d.longitude != 0){
 
-        pontos.push([caso.latitude, caso.longitude]);
+        pontos.push([d.latitude, d.longitude]);
 
-        var cor = "green";
-        if(caso.nivel == "Moderado") cor = "orange";
-        if(caso.nivel == "Alto") cor = "red";
+        let cor = "green";
 
-        var marker = L.circleMarker([caso.latitude, caso.longitude], {
+        if(d.nivel == "Moderado") cor = "orange";
+        if(d.nivel == "Alto") cor = "red";
+
+        var marker = L.circleMarker([d.latitude, d.longitude], {
             color: cor,
             radius: 8,
             fillOpacity: 0.8
@@ -80,8 +90,8 @@ dados.forEach(function(caso){
 
         marker.bindPopup(`
             <b>🩺 Diagnóstico</b><br>
-            Risco: ${caso.nivel}<br>
-            Data: ${caso.data_registro}
+            <b>Nível:</b> ${d.nivel}<br>
+            <b>Data:</b> ${d.data_registro}
         `);
 
         markers.addLayer(marker);

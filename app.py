@@ -1,85 +1,108 @@
 # ==========================================
-# SISTEMA CLÍNICO DE MALÁRIA
-# Flask + Fuzzy + MySQL
-# Render Ready
+# APP.PY - SISTEMA DE MALÁRIA (FINAL PROFISSIONAL)
 # ==========================================
 
 from flask import Flask, render_template, request, redirect, session, url_for, flash
-from werkzeug.security import generate_password_hash, check_password_hash
 from functools import wraps
-from database import conectar
 from fuzzy import calcular_risco
-from dotenv import load_dotenv
+from database import conectar
 import os
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+import uuid
+from datetime import datetime, timedelta
 
-load_dotenv()
 
-app = Flask(__name__)
-app.secret_key = os.getenv("SECRET_KEY", "segredo_super")
 
 # ==========================================
-# LOGIN REQUIRED
+# CONFIGURAÇÃO
+# ==========================================
+app = Flask(__name__)
+app.secret_key = "segredo_super_seguro"
+
+BASE_URL = "https://sistema-clinico1.onrender.com"
+
+EMAIL_USER = "channelsumbo@gmail.com"
+EMAIL_PASS = "ucmxhiplicbqtsad"  # senha app
+
+# ==========================================
+# LOGIN OBRIGATÓRIO
 # ==========================================
 def login_required(f):
     @wraps(f)
-    def decorated(*args, **kwargs):
+    def decorated_function(*args, **kwargs):
         if "user" not in session:
             return redirect(url_for("login"))
         return f(*args, **kwargs)
-    return decorated
+    return decorated_function
 
+# ==========================================
+# 📧 EMAIL (CORRIGIDO)
+# ==========================================
+def enviar_email_link(destino, link):
+    try:
+        msg = MIMEMultipart()
+        msg["From"] = EMAIL_USER
+        msg["To"] = destino
+        msg["Subject"] = "🔐 Recuperação de Senha"
+
+        corpo = f"""
+        Clique no link para redefinir sua senha:
+
+        {link}
+
+        Expira em 15 minutos.
+        """
+
+        msg.attach(MIMEText(corpo, "plain"))
+
+        # 🔥 CORREÇÃO IMPORTANTE
+        with smtplib.SMTP("smtp.gmail.com", 587) as servidor:
+            servidor.ehlo()
+            servidor.starttls()
+            servidor.ehlo()
+            servidor.login(EMAIL_USER, EMAIL_PASS)
+            servidor.sendmail(EMAIL_USER, destino, msg.as_string())
+
+        print("✅ EMAIL ENVIADO COM SUCESSO")
+        return True
+
+    except Exception as e:
+        print("❌ ERRO AO ENVIAR EMAIL:", e)
+        return False
 
 # ==========================================
 # LOGIN
 # ==========================================
-@app.route("/", methods=["GET","POST"])
+@app.route("/", methods=["GET", "POST"])
 def login():
 
-    if request.method=="POST":
+    if request.method == "POST":
+        email = request.form.get("email")
+        pw = request.form.get("password")
 
-        user=request.form["username"]
-        pw=request.form["password"]
+        if not email or not pw:
+            flash("Preencha todos os campos", "warning")
+            return render_template("login.html")
 
-        db=conectar()
-        cursor=db.cursor()
-
-        cursor.execute("SELECT * FROM usuarios WHERE username=%s",(user,))
-        usuario=cursor.fetchone()
-
-        if usuario and check_password_hash(usuario[2],pw):
-            session["user"]=user
-            return redirect(url_for("menu"))
-
-        flash("Login inválido","danger")
-
-    return render_template("login.html")
-
-
-# ==========================================
-# REGISTRAR
-# ==========================================
-@app.route("/registrar",methods=["GET","POST"])
-def registrar():
-
-    if request.method=="POST":
-
-        user=request.form["username"]
-        senha_hash=generate_password_hash(request.form["password"])
-
-        db=conectar()
-        cursor=db.cursor()
+        db = conectar()
+        cursor = db.cursor(buffered=True)
 
         cursor.execute(
-            "INSERT INTO usuarios(username,password) VALUES(%s,%s)",
-            (user,senha_hash)
+            "SELECT * FROM usuarios WHERE email=%s AND password=%s",
+            (email, pw)
         )
-        db.commit()
 
-        flash("Usuário criado!","success")
-        return redirect(url_for("login"))
+        user = cursor.fetchone()
 
-    return render_template("registrar.html")
+        if user:
+            session["user"] = email
+            return redirect(url_for("menu"))
+        else:
+            flash("Email ou senha inválidos", "danger")
 
+    return render_template("login.html")
 
 # ==========================================
 # MENU
@@ -89,107 +112,98 @@ def registrar():
 def menu():
     return render_template("menu.html")
 
+# ==========================================
+# RECUPERAR SENHA
+# ==========================================
+@app.route("/recuperar", methods=["GET", "POST"])
+def recuperar():
+
+    if request.method == "POST":
+
+        email = request.form.get("email")
+
+        if not email:
+            flash("Digite o email", "warning")
+            return render_template("recuperar.html")
+
+        try:
+            db = conectar()
+            cursor = db.cursor(buffered=True)
+
+            cursor.execute("SELECT * FROM usuarios WHERE email=%s", (email,))
+            user = cursor.fetchone()
+
+            if not user:
+                flash("Email não encontrado", "danger")
+                return render_template("recuperar.html")
+
+            token = str(uuid.uuid4())
+            expira = datetime.now() + timedelta(minutes=15)
+
+            cursor.execute(
+                "INSERT INTO password_resets (email, token, expira) VALUES (%s,%s,%s)",
+                (email, token, expira)
+            )
+            db.commit()
+
+            link = f"{BASE_URL}/resetar/{token}"
+
+            enviado = enviar_email_link(email, link)
+
+            if enviado:
+                flash("Link enviado para o email!", "success")
+            else:
+                flash("Erro ao enviar email (ver console Render)", "danger")
+
+            return redirect(url_for("login"))
+
+        except Exception as e:
+            print("❌ ERRO GERAL:", e)
+            flash("Erro interno no servidor", "danger")
+            return redirect(url_for("login"))
+
+    return render_template("recuperar.html")
 
 # ==========================================
-# FORMULÁRIO
+# RESETAR SENHA
 # ==========================================
-@app.route("/home")
-@login_required
-def home():
-    return render_template("form.html")
+@app.route("/resetar/<token>", methods=["GET", "POST"])
+def resetar(token):
 
+    db = conectar()
+    cursor = db.cursor(buffered=True)
 
-# ==========================================
-# DIAGNÓSTICO
-# ==========================================
-@app.route("/diagnostico",methods=["POST"])
-@login_required
-def diagnostico():
-
-    febre=float(request.form["febre"])
-    fadiga=float(request.form["fadiga"])
-    anemia=float(request.form["anemia"])
-
-    latitude=request.form.get("latitude",0)
-    longitude=request.form.get("longitude",0)
-
-    risco=round(calcular_risco(febre,fadiga,anemia),2)
-
-    if risco<40:
-        nivel="Baixo"
-    elif risco<70:
-        nivel="Moderado"
-    else:
-        nivel="Alto"
-
-    db=conectar()
-    cursor=db.cursor()
-
-    cursor.execute("""
-        INSERT INTO diagnosticos
-        (febre,fadiga,anemia,risco,nivel,latitude,longitude)
-        VALUES(%s,%s,%s,%s,%s,%s,%s)
-    """,(febre,fadiga,anemia,risco,nivel,latitude,longitude))
-
-    db.commit()
-
-    return render_template("resultado.html",risco=risco,nivel=nivel)
-
-
-# ==========================================
-# RELATÓRIO
-# ==========================================
-@app.route("/relatorio")
-@login_required
-def relatorio():
-
-    db=conectar()
-    cursor=db.cursor()
-
-    cursor.execute("SELECT * FROM diagnosticos ORDER BY id DESC")
-    dados=cursor.fetchall()
-
-    return render_template("relatorio.html",dados=dados)
-
-
-# ==========================================
-# DASHBOARD
-# ==========================================
-@app.route("/dashboard")
-@login_required
-def dashboard():
-
-    db=conectar()
-    cursor=db.cursor()
-
-    cursor.execute("SELECT COUNT(*) FROM diagnosticos WHERE nivel='Baixo'")
-    baixo=cursor.fetchone()[0]
-
-    cursor.execute("SELECT COUNT(*) FROM diagnosticos WHERE nivel='Moderado'")
-    moderado=cursor.fetchone()[0]
-
-    cursor.execute("SELECT COUNT(*) FROM diagnosticos WHERE nivel='Alto'")
-    alto=cursor.fetchone()[0]
-
-    total=baixo+moderado+alto
-
-    if total>0:
-        p_baixo=round((baixo/total)*100,1)
-        p_moderado=round((moderado/total)*100,1)
-        p_alto=round((alto/total)*100,1)
-    else:
-        p_baixo=p_moderado=p_alto=0
-
-    return render_template(
-        "dashboard.html",
-        baixo=baixo,
-        moderado=moderado,
-        alto=alto,
-        p_baixo=p_baixo,
-        p_moderado=p_moderado,
-        p_alto=p_alto
+    cursor.execute(
+        "SELECT * FROM password_resets WHERE token=%s",
+        (token,)
     )
+    data = cursor.fetchone()
 
+    if not data:
+        return "Token inválido"
+
+    if datetime.now() > data[2]:
+        return "Token expirado"
+
+    if request.method == "POST":
+        nova = request.form.get("senha")
+
+        cursor.execute(
+            "UPDATE usuarios SET password=%s WHERE email=%s",
+            (nova, data[1])
+        )
+
+        cursor.execute(
+            "DELETE FROM password_resets WHERE token=%s",
+            (token,)
+        )
+
+        db.commit()
+
+        flash("Senha alterada com sucesso!", "success")
+        return redirect(url_for("login"))
+
+    return render_template("resetar.html")
 
 # ==========================================
 # LOGOUT
@@ -199,10 +213,9 @@ def logout():
     session.clear()
     return redirect(url_for("login"))
 
-
 # ==========================================
-# EXECUÇÃO LOCAL
+# EXECUÇÃO
 # ==========================================
-if __name__=="__main__":
-    port=int(os.environ.get("PORT",5000))
-    app.run(host="0.0.0.0",port=port)
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port, debug=True)

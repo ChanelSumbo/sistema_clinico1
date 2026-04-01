@@ -4,31 +4,48 @@
 <meta charset="UTF-8">
 <title>Recuperar Senha</title>
 
+<!-- Bootstrap -->
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+
+<!-- Ícones -->
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
 
 <style>
 body {
     margin: 0;
+    overflow: hidden;
 }
 
-.overlay {
-    background: rgba(0,0,0,0.6);
-    position: absolute;
-    width: 100%;
-    height: 100%;
-}
-
+/* IMAGENS */
 .carousel-item img {
     height: 100vh;
     object-fit: cover;
 }
 
-.card {
-    border-radius: 15px;
-    animation: fadeIn 1s ease;
+/* OVERLAY ESCURO */
+.overlay {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.6);
 }
 
+/* CARD CENTRAL */
+.form-container {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+
+/* CARD */
+.card {
+    width: 350px;
+    border-radius: 15px;
+    animation: fadeIn 0.8s ease;
+}
+
+/* ANIMAÇÃO */
 @keyframes fadeIn {
     from {opacity:0; transform: translateY(-20px);}
     to {opacity:1; transform: translateY(0);}
@@ -38,59 +55,57 @@ body {
 
 <body>
 
-<!-- CAROUSEL -->
+<!-- CARROSSEL -->
 <div id="carouselExample" class="carousel slide" data-bs-ride="carousel">
 
 <div class="carousel-inner">
 
-    <!-- IMAGEM 1 -->
     <div class="carousel-item active">
         <img src="{{ url_for('static', filename='img/r.png') }}" class="d-block w-100">
-        <div class="overlay"></div>
     </div>
 
-    <!-- IMAGEM 2 -->
     <div class="carousel-item">
         <img src="{{ url_for('static', filename='img/c.png') }}" class="d-block w-100">
-        <div class="overlay"></div>
     </div>
 
 </div>
 
 </div>
 
+<!-- CAMADA ESCURA -->
+<div class="overlay"></div>
+
 <!-- FORMULÁRIO -->
-<div class="position-absolute top-50 start-50 translate-middle">
+<div class="form-container">
 
-<div class="card p-4 shadow" style="width:350px;">
+<div class="card p-4 shadow">
 
-<h3 class="text-center mb-3">
+<h3 class="text-center mb-3 text-warning">
 <i class="fa fa-key"></i> Recuperar Senha
 </h3>
 
 <form method="POST">
 
 <div class="mb-3">
-<input type="text" name="username" placeholder="Usuário" class="form-control" required>
-</div>
-
-<div class="mb-3">
-<input type="password" name="nova_senha" placeholder="Nova Senha" class="form-control" required>
+<input type="email" name="email" placeholder="Digite seu email" class="form-control" required>
 </div>
 
 <button class="btn btn-warning w-100">
-<i class="fa fa-key"></i> Atualizar Senha
+<i class="fa fa-paper-plane"></i> Enviar Nova Senha
 </button>
 
 </form>
 
 <div class="text-center mt-3">
-<a href="{{ url_for('login') }}" class="btn btn-secondary w-100">Voltar</a>
+<a href="{{ url_for('login') }}" class="btn btn-secondary w-100">
+Voltar
+</a>
 </div>
 
 </div>
 </div>
 
+<!-- Bootstrap JS -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
 </body>

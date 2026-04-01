@@ -1,22 +1,23 @@
 <!DOCTYPE html>
 <html lang="pt">
 <head>
-
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-
 <title>Diagnóstico de Malária</title>
 
+<!-- Bootstrap -->
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 
 <style>
-body{
-    background:#f4f6f9;
+body {
+    background: #f4f6f9;
 }
 
-.card{
-    border-radius:15px;
-    box-shadow:0 4px 10px rgba(0,0,0,0.1);
+.card {
+    border-radius: 15px;
+}
+
+h3 {
+    font-weight: bold;
 }
 </style>
 
@@ -25,116 +26,54 @@ body{
 <body>
 
 <!-- NAVBAR -->
-<nav class="navbar navbar-dark bg-primary">
+<nav class="navbar navbar-dark bg-primary shadow">
 <div class="container-fluid">
-
-<span class="navbar-brand">
-🩺 Sistema Clínico — Diagnóstico de Malária
-</span>
-
-<a href="{{ url_for('menu') }}" class="btn btn-light">
-Voltar
-</a>
-
+<span class="navbar-brand">🩺 Diagnóstico de Malária</span>
+<a href="/menu" class="btn btn-light">Voltar</a>
 </div>
 </nav>
 
-<!-- CONTAINER -->
 <div class="container mt-5">
 
-<div class="row justify-content-center">
+<div class="card p-4 shadow">
 
-<div class="col-md-6">
+<h3 class="mb-4">Inserir Sintomas</h3>
 
-<div class="card p-4">
+<form action="/diagnostico" method="POST">
 
-<h3 class="text-center mb-4">
-Formulário de Diagnóstico
-</h3>
+<!-- CAMPOS -->
+<input name="febre" type="number" step="0.1" min="0" max="10" class="form-control mb-3" placeholder="Febre (0-10)" required>
 
-<form method="POST" action="{{ url_for('diagnostico') }}">
+<input name="fadiga" type="number" step="0.1" min="0" max="10" class="form-control mb-3" placeholder="Fadiga (0-10)" required>
 
-<!-- FEBRE -->
-<div class="mb-3">
-<label class="form-label">Febre (0 - 10)</label>
-<input type="number"
-       class="form-control"
-       name="febre"
-       step="0.1"
-       min="0"
-       max="10"
-       required>
-</div>
+<input name="anemia" type="number" step="0.1" min="0" max="10" class="form-control mb-4" placeholder="Anemia (0-10)" required>
 
-<!-- FADIGA -->
-<div class="mb-3">
-<label class="form-label">Fadiga (0 - 10)</label>
-<input type="number"
-       class="form-control"
-       name="fadiga"
-       step="0.1"
-       min="0"
-       max="10"
-       required>
-</div>
-
-<!-- ANEMIA -->
-<div class="mb-3">
-<label class="form-label">Anemia (0 - 10)</label>
-<input type="number"
-       class="form-control"
-       name="anemia"
-       step="0.1"
-       min="0"
-       max="10"
-       required>
-</div>
-
-<!-- GPS -->
-<input type="hidden" id="latitude" name="latitude">
-<input type="hidden" id="longitude" name="longitude">
+<!-- GPS OCULTO -->
+<input type="hidden" name="latitude" id="lat">
+<input type="hidden" name="longitude" id="lon">
 
 <!-- BOTÃO -->
-<div class="d-grid">
-<button type="submit" class="btn btn-success">
-Diagnosticar Paciente
-</button>
-</div>
+<button class="btn btn-success w-100">🔍 Analisar Diagnóstico</button>
 
 </form>
 
 </div>
 
 </div>
-</div>
-
-</div>
 
 <!-- SCRIPT GPS -->
 <script>
-
 if (navigator.geolocation) {
-
     navigator.geolocation.getCurrentPosition(
-
         function(pos){
-            document.getElementById("latitude").value =
-                pos.coords.latitude;
-
-            document.getElementById("longitude").value =
-                pos.coords.longitude;
+            document.getElementById("lat").value = pos.coords.latitude;
+            document.getElementById("lon").value = pos.coords.longitude;
         },
-
-        function(){
-            console.log("GPS não permitido pelo usuário.");
+        function(error){
+            console.log("GPS não permitido");
         }
-
     );
-
-}else{
-    console.log("Geolocalização não suportada.");
 }
-
 </script>
 
 </body>

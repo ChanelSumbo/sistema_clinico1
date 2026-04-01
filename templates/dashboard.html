@@ -1,33 +1,31 @@
 <!DOCTYPE html>
 <html lang="pt">
 <head>
-
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dashboard Hospitalar</title>
 
-<title>Dashboard Epidemiológico</title>
-
-<!-- Bootstrap -->
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-
-<!-- ChartJS -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
-body{
-    background:#f4f6f9;
+body {
+    background: #f4f6f9;
 }
 
-.card{
-    border-radius:15px;
-    box-shadow:0 4px 10px rgba(0,0,0,0.1);
+.card {
+    border-radius: 15px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    transition: 0.3s;
 }
 
-canvas{
-    max-height:400px;
+.card:hover {
+    transform: scale(1.03);
+}
+
+.navbar {
+    box-shadow: 0 2px 6px rgba(0,0,0,0.2);
 }
 </style>
-
 </head>
 
 <body>
@@ -35,101 +33,78 @@ canvas{
 <!-- NAVBAR -->
 <nav class="navbar navbar-dark bg-primary">
 <div class="container-fluid">
-
-<span class="navbar-brand">
-🩺 Dashboard Epidemiológico — Malária
-</span>
-
-<a href="{{ url_for('menu') }}" class="btn btn-light">
-Voltar
-</a>
-
+<span class="navbar-brand">🏥 Dashboard Hospitalar</span>
+<a href="{{ url_for('menu') }}" class="btn btn-light">Voltar</a>
 </div>
 </nav>
 
-<!-- CONTAINER -->
 <div class="container mt-4">
 
+<!-- CARDS -->
 <div class="row text-center g-3">
 
-<!-- BAIXO -->
 <div class="col-md-4">
 <div class="card bg-success text-white p-3">
-<h5>Risco Baixo</h5>
-<h2>{{ baixo or 0 }}</h2>
-<p>{{ p_baixo or 0 }}%</p>
+<h5>Baixo</h5>
+<h2>{{ baixo }}</h2>
+<p>{{ p_baixo }}%</p>
 </div>
 </div>
 
-<!-- MODERADO -->
 <div class="col-md-4">
-<div class="card bg-warning text-dark p-3">
-<h5>Risco Moderado</h5>
-<h2>{{ moderado or 0 }}</h2>
-<p>{{ p_moderado or 0 }}%</p>
+<div class="card bg-warning p-3">
+<h5>Moderado</h5>
+<h2>{{ moderado }}</h2>
+<p>{{ p_moderado }}%</p>
 </div>
 </div>
 
-<!-- ALTO -->
 <div class="col-md-4">
 <div class="card bg-danger text-white p-3">
-<h5>Risco Alto</h5>
-<h2>{{ alto or 0 }}</h2>
-<p>{{ p_alto or 0 }}%</p>
+<h5>Alto</h5>
+<h2>{{ alto }}</h2>
+<p>{{ p_alto }}%</p>
 </div>
 </div>
 
 </div>
 
 <!-- GRÁFICO -->
-<div class="card mt-4 p-4">
-
-<h5 class="text-center mb-3">
-Distribuição dos Diagnósticos
-</h5>
-
+<div class="mt-5">
 <canvas id="grafico"></canvas>
-
 </div>
 
 </div>
 
-<!-- SCRIPT DO GRÁFICO -->
+<!-- SCRIPT -->
 <script>
+    // Valores vindos do Flask (SEMPRE usar default)
+    const baixo = {{ baixo | default(0) }};
+    const moderado = {{ moderado | default(0) }};
+    const alto = {{ alto | default(0) }};
 
-const dados = [
-    {{ p_baixo or 0 }},
-    {{ p_moderado or 0 }},
-    {{ p_alto or 0 }}
-];
-
-new Chart(document.getElementById("grafico"), {
-
-    type: "doughnut",
-
-    data: {
-        labels: ["Baixo", "Moderado", "Alto"],
-        datasets: [{
-            data: dados,
-            backgroundColor: [
-                "#28a745",
-                "#ffc107",
-                "#dc3545"
-            ],
-            borderWidth: 2
-        }]
-    },
-
-    options: {
-        responsive: true,
-        plugins: {
-            legend: {
-                position: "bottom"
+    new Chart(document.getElementById('grafico'), {
+        type: 'doughnut',
+        data: {
+            labels: ['Baixo', 'Moderado', 'Alto'],
+            datasets: [{
+                data: [baixo, moderado, alto],
+                backgroundColor: [
+                    '#28a745',  // verde
+                    '#ffc107',  // amarelo
+                    '#dc3545'   // vermelho
+                ]
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                }
             }
         }
-    }
-
-});
+    });
 </script>
 
 </body>
